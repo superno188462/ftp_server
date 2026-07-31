@@ -1,0 +1,34 @@
+name: ftp_server
+
+services:
+  web:
+    build:
+      context: ..
+      dockerfile: docker/web/Dockerfile
+    container_name: ftp_web
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    volumes:
+      - ftp_uploads:/var/ftp/uploads
+    ports:
+      - "9002:5000"
+    depends_on:
+      - ftp
+
+  ftp:
+    build:
+      context: ./ftp
+      dockerfile: Dockerfile
+    container_name: ftp_server
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    volumes:
+      - ftp_uploads:/var/ftp/uploads
+    ports:
+      - "21:21"
+      - "21100-21110:21100-21110"
+
+volumes:
+  ftp_uploads:

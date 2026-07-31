@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FTP 上传</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #f5f7fa;
+    color: #2c3e50;
+    margin: 0;
+    padding: 24px;
+  }
+  .container { max-width: 880px; margin: 0 auto; }
+  h1 { margin: 0 0 8px; font-size: 24px; }
+  .subtitle { color: #7f8c8d; margin-bottom: 24px; font-size: 14px; }
+  .card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+  }
+  .card h2 { margin-top: 0; font-size: 17px; color: #34495e; }
+  label { display: block; font-size: 13px; color: #7f8c8d; margin-bottom: 6px; }
+  input[type="text"], input[type="file"], textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #dce1e6;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    background: #fafbfc;
+  }
+  textarea { min-height: 140px; resize: vertical; font-family: ui-monospace, Menlo, monospace; }
+  input[type="text"]:focus, textarea:focus { outline: none; border-color: #3498db; background: #fff; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  button {
+    background: #3498db;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+  button:hover { background: #2980b9; }
+  button.danger { background: #e74c3c; padding: 6px 12px; font-size: 13px; }
+  button.danger:hover { background: #c0392b; }
+  .flash { padding: 10px 14px; border-radius: 6px; margin-bottom: 16px; font-size: 14px; }
+  .flash.success { background: #dff5e7; color: #1e7a3e; }
+  .flash.error { background: #fde2e2; color: #b03636; }
+  .file-list { list-style: none; padding: 0; margin: 0; }
+  .file-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-bottom: 1px solid #ecf0f1;
+    font-size: 14px;
+  }
+  .file-list li:last-child { border-bottom: none; }
+  .file-list .meta { color: #95a5a6; font-size: 12px; }
+  .file-list .name { color: #2c3e50; font-weight: 500; }
+  .empty { color: #95a5a6; text-align: center; padding: 24px; }
+  .hint { font-size: 12px; color: #95a5a6; margin-top: 6px; }
+  .actions form { display: inline; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>📁 FTP 文件上传</h1>
+  <div class="subtitle">支持上传文本文件、压缩包；也可直接粘贴文本保存为文件</div>
+
+  {% if download_authed %}
+  <div class="flash" style="background:#e3f2fd; color:#1565c0; display:flex; justify-content:space-between; align-items:center;">
+    <span>🔓 已解锁下载</span>
+    <form method="post" action="{{ url_for('logout') }}" style="margin:0;">
+      <button type="submit" style="background:#607d8b; padding:4px 12px; font-size:12px;">退出</button>
+    </form>
+  </div>
+  {% endif %}
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="flash {{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="card">
+    <h2>上传文件</h2>
+    <form method="post" enctype="multipart/form-data">
+      <label>选择文本或 .zip 文件</label>
+      <input type="file" name="file" accept=".txt,.md,.log,.csv,.json,.xml,.yaml,.yml,.ini,.conf,.zip">
+      <div class="hint">单个文件最大 500 MB</div>
+      <div style="margin-top: 14px;">
+        <button type="submit">上传</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>粘贴文本保存</h2>
+    <form method="post">
+      <label>文件名</label>
+      <input type="text" name="text_filename" placeholder="例如: notes.txt" value="note.txt">
+      <div style="margin-top: 12px;">
+        <label>内容</label>
+        <textarea name="pasted_text" placeholder="在这里粘贴或输入文本..."></textarea>
+      </div>
+      <div style="margin-top: 14px;">
+        <button type="submit">保存文本</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>已上传的文件</h2>
+    {% if files %}
+    <ul class="file-list">
+      {% for f in files %}
+      <li>
+        <div>
+          <div class="name">{{ f.name }}</div>
+          <div class="meta">{{ f.size }}</div>
+        </div>
+        <div class="actions">
+          <a href="{{ url_for('download', filename=f.name) }}"><button type="button">下载</button></a>
+          <form method="post" action="{{ url_for('delete', filename=f.name) }}"
+                onsubmit="return confirm('确定删除 {{ f.name }}?')">
+            <button type="submit" class="danger">删除</button>
+          </form>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="empty">还没有文件</div>
+    {% endif %}
+  </div>
+</div>
+</body>
+</html>

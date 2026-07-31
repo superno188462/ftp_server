@@ -1,0 +1,13 @@
+# Environment file (real values, per-machine). Tracked template is .env.example.
+.env
+
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv

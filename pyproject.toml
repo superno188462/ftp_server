@@ -1,0 +1,11 @@
+[project]
+name = "ftp-web"
+version = "0.1.0"
+description = "Web upload UI for the FTP server"
+requires-python = ">=3.11"
+dependencies = [
+    "flask==3.0.3",
+    "werkzeug==3.0.4",
+    "gunicorn==22.0.0",
+    "python-dotenv>=1.2.2",
+]
