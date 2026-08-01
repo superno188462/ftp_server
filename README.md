@@ -33,7 +33,7 @@ ftp_server/
 
 `docker-compose.yml` 通过 `build.context` / `dockerfile` 显式声明，源码与构建资产解耦，全部 Docker 资产集中在 `docker/`。
 
-两个容器共享 volume `ftp_uploads`，路径都是 `/var/ftp/uploads`。
+两个容器共享宿主目录 `~/usr/database/ftp`（bind mount 到容器内的 `/var/ftp/uploads`）。宿主目录需提前创建并设置好权限（`chown 1001:1001 && chmod 777`），1001 是 ftp 容器内 `ftpuser` 的 UID（Ubuntu 22.04 基础镜像中 `ubuntu=1000`，`ftpuser` 顺延为 1001）。
 
 ## 启动
 

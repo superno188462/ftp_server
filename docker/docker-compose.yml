@@ -10,7 +10,7 @@ services:
     env_file:
       - ../.env
     volumes:
-      - ftp_uploads:/var/ftp/uploads
+      - /home/zkjiao/usr/database/ftp:/var/ftp/uploads
     ports:
       - "9002:5000"
     depends_on:
@@ -25,10 +25,7 @@ services:
     env_file:
       - ../.env
     volumes:
-      - ftp_uploads:/var/ftp/uploads
+      - /home/zkjiao/usr/database/ftp:/var/ftp/uploads
     ports:
       - "21:21"
       - "21100-21110:21100-21110"
-
-volumes:
-  ftp_uploads:

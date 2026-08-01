@@ -2,6 +2,19 @@
 
 > 每次任务完成后追加：日期 + 做了什么 + 为什么。
 
+## 2026-08-01
+
+### volume 改 bind mount：命名卷 → `~/usr/database/ftp`
+
+- **背景**：之前用 Docker 命名卷 `ftp_uploads`，文件实际落在 `/var/lib/docker/volumes/ftp_server_ftp_uploads/_data`，不便直接 `ls` / `rsync` 出来；按用户要求把上传目录迁到宿主 `~/usr/database/ftp`（最初误拼为 `datebase`，已修正）。
+- **变更**：
+  - `docker/docker-compose.yml` 把两个服务的 `ftp_uploads:/var/ftp/uploads` 全部换成绝对路径 bind mount `/home/zkjiao/usr/database/ftp:/var/ftp/uploads`，并删除末尾 `volumes: ftp_uploads:` 声明（命名卷不再需要）
+  - 宿主目录 `sudo mkdir -p /home/zkjiao/usr/database/ftp && sudo chown 1001:1001 && sudo chmod 777` —— 1001 是 ftp 容器内 `ftpuser` 的 UID（Ubuntu 22.04 基础镜像 `ubuntu=1000`，`useradd ftpuser` 顺延 1001），777 是为了让 web 容器以 root 写的文件也能被 ftpuser 删除
+  - `README.md` 第 36 行同步说明改成 bind mount 路径与权限
+  - `.env` 中 `UPLOAD_DIR=/var/ftp/uploads` **不变**——那是容器内路径，外部不要改
+- **未迁移旧数据**：旧文件仍在命名卷里。如需保留：`sudo docker compose down` → `sudo cp -a /var/lib/docker/volumes/ftp_server_ftp_uploads/_data/* ~/usr/database/ftp/` → `sudo chown 1001:1001 ~/usr/database/ftp/*` → 再 `up -d --build`。
+- **未执行 `docker compose up -d --build`**：等用户在确认无问题后手动重建。
+
 ## 2026-07-31
 
 ### nginx 反代 subpath 修复（X-Script-Name 没生效 → reload）
