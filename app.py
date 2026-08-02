@@ -5,6 +5,7 @@ import re
 import unicodedata
 import zipfile
 import uuid
+from datetime import datetime
 from functools import wraps
 
 load_dotenv()
@@ -160,14 +161,19 @@ def index():
         return redirect(url_for("index"))
 
     files = []
-    for name in sorted(os.listdir(UPLOAD_DIR), reverse=True):
-        full = os.path.join(UPLOAD_DIR, name)
-        if os.path.isfile(full):
-            files.append({
-                "name": name,
-                "size": human_size(os.path.getsize(full)),
-                "mtime": os.path.getmtime(full),
-            })
+    entries = [
+        (name, os.path.join(UPLOAD_DIR, name))
+        for name in os.listdir(UPLOAD_DIR)
+        if os.path.isfile(os.path.join(UPLOAD_DIR, name))
+    ]
+    entries.sort(key=lambda e: os.path.getmtime(e[1]), reverse=True)
+    for name, full in entries:
+        files.append({
+            "name": name,
+            "size": human_size(os.path.getsize(full)),
+            "mtime": os.path.getmtime(full),
+            "mtime_str": datetime.fromtimestamp(os.path.getmtime(full)).strftime("%Y-%m-%d %H:%M:%S"),
+        })
 
     return render_template("index.html", files=files)
 

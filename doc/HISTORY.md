@@ -2,6 +2,17 @@
 
 > 每次任务完成后追加：日期 + 做了什么 + 为什么。
 
+## 2026-08-02
+
+### 列表按 mtime 排序 + gunicorn 长连接配置
+
+- **背景**：文件列表之前按文件名排序，用户期望按真实修改时间倒序展示，便于找最近上传的文件；同时长时间大文件上传会被 gunicorn 默认超时杀掉，日志也没有输出。
+- **变更**：
+  - `app.py` 的 `index()` 改为按 `os.path.getmtime` 真实 mtime 倒序排序（不再按文件名），每条记录新增 `mtime_str`（`datetime.fromtimestamp` 格式化为 `YYYY-MM-DD HH:MM:SS`），并 `from datetime import datetime`
+  - `docker/web/Dockerfile` 的 gunicorn CMD 增加 `--timeout 600 --keep-alive 60 --access-logfile - --error-logfile -`：长上传不被 kill，访问/错误日志打到 stdout 供 docker logs 查看
+  - `src/templates/index.html` 文件行 meta 由仅显示大小改为 `{{ f.mtime_str }} · {{ f.size }}`
+- **未重建容器**：Dockerfile 变更需 `docker compose up -d --build` 生效，本任务仅提交代码与文档，未执行重建。
+
 ## 2026-08-01
 
 ### volume 改 bind mount：命名卷 → `~/usr/database/ftp`

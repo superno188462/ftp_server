@@ -125,7 +125,7 @@
       <li>
         <div>
           <div class="name">{{ f.name }}</div>
-          <div class="meta">{{ f.size }}</div>
+          <div class="meta">{{ f.mtime_str }} · {{ f.size }}</div>
         </div>
         <div class="actions">
           <a href="{{ url_for('download', filename=f.name) }}"><button type="button">下载</button></a>

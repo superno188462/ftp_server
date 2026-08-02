@@ -19,4 +19,4 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 EXPOSE 5000
 
-CMD ["uv", "run", "gunicorn", "-w", "2", "-b", "0.0.0.0:5000", "app:app"]
+CMD ["uv", "run", "gunicorn", "-w", "2", "--timeout", "600", "--keep-alive", "60", "--access-logfile", "-", "--error-logfile", "-", "-b", "0.0.0.0:5000", "app:app"]
