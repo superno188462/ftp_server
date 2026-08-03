@@ -2,6 +2,29 @@
 
 > 每次任务完成后追加：日期 + 做了什么 + 为什么。
 
+## 2026-08-03
+
+### 远程 FTP 接入（用户名/密码可配 + PASV 切公网 IP）
+
+- **背景**：用户要求其他设备能从远程连进 FTP，且要设置专用连接用户名/密码。容器端口 `21` + `21100-21110` 已经在公网监听（`docker ps` 看 0.0.0.0 绑定），但 `PASV_ADDRESS` 还是 `127.0.0.1`——被动模式下服务端告诉客户端"数据连来 127.0.0.1"，外网客户端自然连不通；另外 `entrypoint.sh` 把用户名硬编码成 `ftpuser`，环境变量没法改。
+- **变更**：
+  - `docker/ftp/entrypoint.sh`：
+    - 增 `FTP_USER="${FTP_USER:-ftpuser}"`，后续 `useradd` / `chown` / `chpasswd` 都用变量
+    - 防御性补一句 `chown -R "$FTP_USER:$FTP_USER" /var/ftp`（即使用户切换了也能 chown 到新用户）
+  - `docker/ftp/vsftpd.conf`：`chroot_list_enable=YES` → `NO`。原先没创建 `/etc/vsftpd.chroot_list` 文件，启动时报 `500 OOPS: could not read chroot() list file`——这是 ftp 之前没真测过留下的隐性 bug，我们反正不用例外名单，直接关掉
+  - `.env`：
+    - 新增 `FTP_USER=ftpuser`
+    - `FTP_PASS=ftppass123` → `zkjiao`（用户指定）
+    - `PASV_ADDRESS=127.0.0.1` → `119.45.48.180`（公网 IP，外网客户端的 PASV 数据连接才能回来）
+  - `.env.example` 同步：`FTP_USER` 占位 + `FTP_PASS=change-me` + `PASV_ADDRESS=127.0.0.1`（保留 127 作占位，提醒自己这是「本机/内网」语义）
+  - `README.md`：FTP 表格拆成本机/公网两行，凭据改成读 `.env`；「FTP 客户端使用」段同时给出本机与 `119.45.48.180:21` 两条；环境变量表加上 `FTP_USER`、强调 `PASV_ADDRESS` 必须是客户端可达 IP；老版本里「`PASV_ADDRESS` 在 `entrypoint.sh` 里硬编码」的过时描述删掉
+- **验证**：
+  - `sudo docker compose -f docker/docker-compose.yml up -d --build ftp` 镜像重建成功，ftp 容器重启
+  - 容器内确认：`pasv_address=119.45.48.180`、`chroot_list_enable=NO`、`local_root=/var/ftp/uploads`
+  - 错误密码 `curl -u 'ftpuser:wrong' ftp://127.0.0.1:21/` → `530 Not logged in`
+  - 正确密码 `curl -u 'ftpuser:zkjiao' --ftp-pasv -o test.md ftp://127.0.0.1:21/<...>.md` → 下载 51951 B，MD5 `a136a7b5...` 与宿主机原文件完全一致，PASV 全链路通
+- **未做**：腾讯云/防火墙入站放行 `21` + `21100-21110`——这是云账号侧的动作，未操作。已在 `doc/TASK.md` 记入 backlog 等用户处理后我再用外网 IP 完整跑一遍 FTP 远端验证。
+
 ## 2026-08-02
 
 ### 列表按 mtime 排序 + gunicorn 长连接配置

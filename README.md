@@ -44,10 +44,11 @@ docker compose up -d --build
 
 启动后：
 
-| 服务     | 地址                      | 凭据            |
-|----------|---------------------------|-----------------|
-| Web 上传 | http://localhost:5000     | 无              |
-| FTP      | ftp://localhost:21        | `ftpuser` / `ftppass123` |
+| 服务     | 地址                            | 凭据                       |
+|----------|---------------------------------|----------------------------|
+| Web 上传 | http://localhost:5000           | 无                         |
+| FTP 本机 | ftp://localhost:21              | `.env` 中的 `FTP_USER` / `FTP_PASS` |
+| FTP 公网 | ftp://119.45.48.180:21          | 同上                        |
 
 ## Web 端使用
 
@@ -61,11 +62,21 @@ docker compose up -d --build
 
 ## FTP 客户端使用
 
+本机：
+
 ```bash
-ftp ftp://ftpuser:ftppass123@localhost
+ftp ftp://<FTP_USER>:<FTP_PASS>@localhost
 ```
 
-> 注意：`PASV_ADDRESS` 在 `entrypoint.sh` 里硬编码 `127.0.0.1`，仅供本机或反代访问。远程客户端需改为宿主机对外 IP，并在安全组/防火墙放行 `21` 端口和 `21100-21110` 端口段。
+外网（手机/家用宽带等远程设备直连，需公网可达且安全组放行 `21` + `21100-21110`）：
+
+```bash
+ftp ftp://<FTP_USER>:<FTP_PASS>@119.45.48.180:21
+```
+
+`PASV_ADDRESS=119.45.48.180` 来自 `.env`，是 vsftpd 被动模式告诉客户端"数据连接去连哪里"用的地址。必须是客户端能到达的 IP——内网客户端填内网 IP，公网客户端填公网 IP，混用会导致 PASV 数据通道超时。
+
+> 提示：FTP 明文传密码与文件，敏感数据请改用 SFTP（不是本项目）。
 
 ## 关于基础镜像
 
@@ -86,8 +97,9 @@ ftp ftp://ftpuser:ftppass123@localhost
 | `UPLOAD_DIR`       | `/var/ftp/uploads` | 共享上传目录          |
 | `FLASK_SECRET`     | `change-me-in-production` | Flask session 密钥 |
 | `DOWNLOAD_PASSWORD`| `123456`      | Web 端下载密码             |
+| `FTP_USER`         | `ftpuser`     | FTP 登录用户名             |
 | `FTP_PASS`         | `change-me`   | FTP 登录密码               |
-| `PASV_ADDRESS`     | `127.0.0.1`   | vsftpd 被动模式对外地址    |
+| `PASV_ADDRESS`     | `127.0.0.1`   | vsftpd 被动模式对外地址；远程访问填公网 IP  |
 
 修改后重建并重启：
 
